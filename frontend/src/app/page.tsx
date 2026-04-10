@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowRight, BarChart3, BrainCircuit, LineChart } from "lucide-react";
+import { ArrowRight, BarChart3, BrainCircuit, LineChart, TrendingUp } from "lucide-react";
 
 export default function LandingPage() {
   return (
