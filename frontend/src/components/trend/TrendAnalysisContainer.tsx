@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { Search, Map, Calendar, ArrowRight, Loader2 } from "lucide-react";
-import api from "@/lib/api";
+import { api } from "@/lib/api";
 import { ApiResponse, Region, TrendPoint } from "@/types";
 import TrendLineChart from "../charts/TrendLineChart";
 import { cn } from "@/lib/utils";

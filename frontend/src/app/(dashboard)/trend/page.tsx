@@ -1,5 +1,5 @@
 import { TrendingUp } from "lucide-react";
-import api from "@/lib/api";
+import { api } from "@/lib/api";
 import { ApiResponse, Region } from "@/types";
 import TrendAnalysisContainer from "@/components/trend/TrendAnalysisContainer";
 
