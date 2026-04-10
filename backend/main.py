@@ -4,12 +4,17 @@ from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 import oracledb
 from dotenv import load_dotenv
+from openai import OpenAI
 
 # 환경 변수 로드
 load_dotenv()
 DB_USER = os.getenv("DB_USER")
 DB_PASSWORD = os.getenv("DB_PASSWORD")
 DB_DSN = os.getenv("DB_DSN")
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+
+# OpenAI 클라이언트 초기화
+client = OpenAI(api_key=OPENAI_API_KEY)
 
 # 전역 커넥션 풀 변수
 db_pool = None
@@ -51,7 +56,7 @@ app.add_middleware(
 
 @app.get("/")
 def read_root():
-    return {"message": "부동산 매매지수 API 서버가 정상 작동 중입니다. 🚀"}
+    return {"status": "success", "message": "부동산 매매지수 API 서버가 정상 작동 중입니다. 🚀"}
 
 @app.get("/api/regions")
 def get_regions():
@@ -114,3 +119,51 @@ def get_trend(region_id: int):
                 return {"status": "success", "region_id": region_id, "data": results}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/ai-insight")
+def get_ai_insight(
+    target_month: str = Query(..., description="분석할 연월 (예: 202603)")
+):
+    """부동산 데이터를 바탕으로 OpenAI가 냉철한 분석 보고서를 생성합니다."""
+    try:
+        # 1. 분석을 위한 데이터 조회 (TOP 5 Ranking 데이터 활용)
+        with db_pool.acquire() as connection:
+            with connection.cursor() as cursor:
+                query = """
+                    SELECT R.REGION_NAME, I.INDEX_VALUE
+                    FROM TB_APT_PRICE_INDEX I
+                    JOIN TB_REGION R ON I.REGION_ID = R.REGION_ID
+                    WHERE I.BASE_YYYYMM = :month
+                    ORDER BY I.INDEX_VALUE DESC
+                    FETCH FIRST 5 ROWS ONLY
+                """
+                cursor.execute(query, month=target_month)
+                rows = cursor.fetchall()
+                
+                if not rows:
+                    return {"status": "success", "insight": "해당 월의 데이터가 부족하여 분석을 진행할 수 없습니다."}
+
+                data_summary = ", ".join([f"{row[0]}({row[1]}pt)" for row in rows])
+
+        # 2. OpenAI 프롬프트 구성 (냉철한 분석가 컨셉)
+        system_prompt = "당신은 대한민국 부동산 시장을 분석하는 냉철하고 객관적인 전문 분석가입니다. 감정적인 수식어는 배제하고, 데이터에 기반하여 현상을 날카롭게 분석하십시오. 결과는 반드시 2~3문항의 불렛 포인트 형식으로 제공하십시오."
+        
+        user_prompt = f"{target_month[:4]}년 {target_month[4:]}월 기준, 아파트 매매가격지수 상위 5개 지역 데이터는 다음과 같습니다: {data_summary}. 이 데이터를 분석하여 현재 시장의 특징과 향후 주의해야 할 점을 보고하십시오. 한국어로 답변하십시오."
+
+        # 3. OpenAI API 호출
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt}
+            ],
+            max_tokens=600,
+            temperature=0.3
+        )
+
+        insight_text = response.choices[0].message.content
+        return {"status": "success", "target_month": target_month, "insight": insight_text}
+
+    except Exception as e:
+        print(f"AI Insight Error: {e}")
+        return {"status": "error", "message": "AI 분석 중 오류가 발생했습니다. API 키 설정을 확인하세요."}

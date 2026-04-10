@@ -17,10 +17,22 @@ async function getRankingData(targetMonth: string) {
         limit: 5 
       },
     });
-    return res.data.data;
+    return res.data.data || [];
   } catch (error) {
     console.error("데이터 호출 에러:", error);
     return [];
+  }
+}
+
+async function getAiInsight(targetMonth: string) {
+  try {
+    const res = await api.get<ApiResponse<null>>(`/api/ai-insight`, {
+      params: { target_month: targetMonth },
+    });
+    return res.data.insight || "분석 결과를 가져올 수 없습니다.";
+  } catch (error) {
+    console.error("AI 인사이트 에러:", error);
+    return "AI 분석 호출 중 오류가 발생했습니다. 백엔드 서버와 API 키를 확인하세요.";
   }
 }
 
@@ -30,7 +42,12 @@ export default async function Dashboard({ searchParams }: PageProps) {
     ? resolvedParams.target_month 
     : "202603";
 
-  const data = await getRankingData(targetMonth);
+  // 데이터를 병렬로 패칭합니다.
+  const [data, aiInsight] = await Promise.all([
+    getRankingData(targetMonth),
+    getAiInsight(targetMonth)
+  ]);
+
   const topRegion = data.length > 0 ? data[0] : null;
 
   return (
@@ -109,31 +126,20 @@ export default async function Dashboard({ searchParams }: PageProps) {
               <div className="bg-white/20 p-2 rounded-xl backdrop-blur-md">
                 <Sparkles className="w-6 h-6 text-indigo-100" />
               </div>
-              <h2 className="text-xl font-bold">AI 시장 분석</h2>
+              <h2 className="text-xl font-bold">AI 시장 분석 (By GPT-4o-mini)</h2>
             </div>
             
             <div className="flex-1 space-y-6">
-              <div className="p-4 rounded-2xl bg-white/10 border border-white/10 backdrop-blur-sm">
-                <p className="text-sm leading-relaxed text-indigo-50 italic">
-                  "현재 {topRegion?.REGION_NAME || '전국'} 지역은 지수가 {topRegion?.INDEX_VALUE || '-'} 포인트로 가장 높게 나타나고 있습니다. 이는 과거 추세 대비 상당한 견조함을 시사합니다."
-                </p>
+              <div className="p-5 rounded-2xl bg-white/10 border border-white/10 backdrop-blur-sm">
+                <div className="text-sm leading-relaxed text-indigo-50 whitespace-pre-wrap">
+                  {aiInsight}
+                </div>
               </div>
-              
-              <ul className="space-y-3 text-sm text-indigo-100">
-                <li className="flex gap-2">
-                  <span className="text-white font-bold opacity-100">•</span>
-                  상위 5개 지역의 평균 지수가 100을 상회함
-                </li>
-                <li className="flex gap-2">
-                  <span className="text-white font-bold opacity-100">•</span>
-                  매수 심리가 수도권을 중심으로 회복 중
-                </li>
-              </ul>
             </div>
 
-            <button className="mt-8 w-full py-4 bg-white text-indigo-600 font-bold rounded-2xl hover:bg-indigo-50 transition-colors shadow-lg">
-               상세 조언 받기 (Coming Soon)
-            </button>
+            <p className="mt-8 text-xs text-indigo-200 text-center opacity-70">
+              냉철한 분석 알고리즘이 실시간 데이터를 정밀하게 진단 중입니다.
+            </p>
           </div>
         </div>
       </div>

@@ -12,8 +12,14 @@ export interface RankingData {
   INDEX_VALUE: number;
 }
 
+export interface AiInsightData {
+  target_month: string;
+  insight: string;
+}
+
 export interface ApiResponse<T> {
   status: string;
-  data: T;
+  data?: T;
+  insight?: string; // AI 응답의 경우 insight 필드가 바로 올 수 있음
   message?: string;
 }
