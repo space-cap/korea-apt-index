@@ -22,9 +22,19 @@ export interface TrendPoint {
   INDEX_VALUE: number;
 }
 
+export interface RankingTableData {
+  REGION_NAME: string;
+  CURRENT_INDEX: number;
+  PREV_INDEX: number | null;
+  CHANGE_VAL: number;
+  CHANGE_PCT: number;
+  AVG_DIFF: number;
+}
+
 export interface ApiResponse<T> {
   status: string;
   data?: T;
-  insight?: string; // AI 응답의 경우 insight 필드가 바로 올 수 있음
+  insight?: string;
+  nat_avg?: number; // 전국 평균 값
   message?: string;
 }

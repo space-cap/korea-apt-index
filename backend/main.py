@@ -167,3 +167,71 @@ def get_ai_insight(
     except Exception as e:
         print(f"AI Insight Error: {e}")
         return {"status": "error", "message": "AI 분석 중 오류가 발생했습니다. API 키 설정을 확인하세요."}
+
+def get_previous_month(target_month: str) -> str:
+    """YYYYMM 형식의 문자열을 받아 전월을 반환합니다."""
+    year = int(target_month[:4])
+    month = int(target_month[4:])
+    
+    if month == 1:
+        prev_year = year - 1
+        prev_month = 12
+    else:
+        prev_year = year
+        prev_month = month - 1
+        
+    return f"{prev_year}{prev_month:02d}"
+
+@app.get("/api/ranking/full")
+def get_ranking_full(
+    target_month: str = Query(..., description="조회할 연월 (예: 202603)")
+):
+    """전국 모든 지역의 지수, 전월 대비 변동률, 전국 평균 대비 차이를 반환합니다."""
+    try:
+        prev_month = get_previous_month(target_month)
+        
+        with db_pool.acquire() as connection:
+            with connection.cursor() as cursor:
+                # 1. 전국 평균 계산
+                cursor.execute("SELECT AVG(INDEX_VALUE) FROM TB_APT_PRICE_INDEX WHERE BASE_YYYYMM = :month", month=target_month)
+                nat_avg = cursor.fetchone()[0] or 0
+                
+                # 2. 전월 대비 변동률 및 평균 대비 차이 계산 쿼리
+                query = """
+                    SELECT 
+                        curr.REGION_NAME, 
+                        curr.INDEX_VALUE AS CURRENT_INDEX,
+                        prev.INDEX_VALUE AS PREV_INDEX,
+                        ROUND(curr.INDEX_VALUE - prev.INDEX_VALUE, 2) AS CHANGE_VAL,
+                        CASE 
+                            WHEN prev.INDEX_VALUE IS NOT NULL AND prev.INDEX_VALUE != 0 
+                            THEN ROUND(((curr.INDEX_VALUE - prev.INDEX_VALUE) / prev.INDEX_VALUE) * 100, 2)
+                            ELSE 0 
+                        END AS CHANGE_PCT,
+                        ROUND(curr.INDEX_VALUE - :avg_val, 2) AS AVG_DIFF
+                    FROM 
+                        (SELECT R.REGION_NAME, I.INDEX_VALUE, I.REGION_ID 
+                         FROM TB_APT_PRICE_INDEX I 
+                         JOIN TB_REGION R ON I.REGION_ID = R.REGION_ID 
+                         WHERE I.BASE_YYYYMM = :month) curr
+                    LEFT JOIN 
+                        (SELECT REGION_ID, INDEX_VALUE 
+                         FROM TB_APT_PRICE_INDEX 
+                         WHERE BASE_YYYYMM = :prev_month) prev
+                    ON curr.REGION_ID = prev.REGION_ID
+                    ORDER BY CHANGE_PCT DESC
+                """
+                cursor.execute(query, month=target_month, prev_month=prev_month, avg_val=nat_avg)
+                
+                columns = [col[0] for col in cursor.description]
+                results = [dict(zip(columns, row)) for row in cursor.fetchall()]
+                
+                return {
+                    "status": "success", 
+                    "target_month": target_month, 
+                    "nat_avg": round(nat_avg, 2),
+                    "data": results
+                }
+    except Exception as e:
+        print(f"Ranking Full Error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
