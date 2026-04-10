@@ -1,88 +1,71 @@
-"use client";
+import { api } from "@/lib/api";
+import { ApiResponse, RankingData } from "@/types";
+import RankingChart from "@/components/charts/RankingChart";
 
-import { useEffect, useState } from "react";
-import axios from "axios";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
-
-// API 데이터 구조 정의
-interface RankingData {
-  REGION_NAME: string;
-  INDEX_VALUE: number;
+// Next.js 서버 컴포넌트: 검색 파라미터를 props로 받습니다.
+interface PageProps {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }
 
-export default function Dashboard() {
-  const [data, setData] = useState<RankingData[]>([]);
-  const [loading, setLoading] = useState(true);
+async function getRankingData(targetMonth: string) {
+  try {
+    // 서버 환경에서 FastAPI를 직접 호출합니다.
+    const res = await api.get<ApiResponse<RankingData[]>>(`/api/ranking`, {
+      params: { 
+        target_month: targetMonth, 
+        limit: 5 
+      },
+    });
+    return res.data.data;
+  } catch (error) {
+    console.error("데이터 호출 에러:", error);
+    // 에러 발생 시 빈 배열 반환하여 클라이언트 에러 방지
+    return [];
+  }
+}
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        // 백엔드 FastAPI 서버에서 2026년 3월 TOP 5 데이터를 가져옵니다.
-        const response = await axios.get("http://127.0.0.1:8000/api/ranking?target_month=202603&limit=5");
-        setData(response.data.data);
-      } catch (error) {
-        console.error("데이터 호출 에러:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchData();
-  }, []);
+export default async function Dashboard({ searchParams }: PageProps) {
+  // searchParams에서 target_month 추출 (기본값 202603)
+  const resolvedParams = await searchParams;
+  const targetMonth = typeof resolvedParams.target_month === "string" 
+    ? resolvedParams.target_month 
+    : "202603";
+
+  // SSR 단계에서 데이터 Fetch
+  const data = await getRankingData(targetMonth);
 
   return (
-    <div className="min-h-screen bg-slate-50 p-8 font-sans text-slate-900">
-      <div className="max-w-4xl mx-auto">
-
-        {/* 상단 타이틀 섹션 */}
-        <header className="mb-10 text-center">
-          <h1 className="text-4xl font-extrabold tracking-tight text-indigo-600 mb-2">
-            PRO 부동산 대시보드
+    <div className="max-w-4xl mx-auto space-y-8">
+      {/* 상단 웰컴 메시지 및 요약 (임시) */}
+      <div className="bg-white rounded-3xl shadow-sm border border-slate-100 p-8 flex justify-between items-center bg-gradient-to-tr from-white to-indigo-50">
+        <div>
+          <h1 className="text-3xl font-extrabold tracking-tight text-slate-800 mb-2">
+            지수 상승 지역 한눈에 보기
           </h1>
-          <p className="text-slate-500 text-lg">전국 아파트 매매가격지수 TOP 5 지역 (2026년 03월)</p>
-        </header>
-
-        {/* 메인 콘텐츠 카드 */}
-        <div className="bg-white rounded-3xl shadow-2xl p-8 border border-slate-100">
-          {loading ? (
-            <div className="h-80 flex items-center justify-center text-indigo-400 font-bold animate-pulse">
-              FastAPI 서버에서 데이터를 가져오는 중... 🚀
-            </div>
-          ) : (
-            <div className="h-[400px] w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={data} layout="vertical" margin={{ top: 20, right: 60, left: 40, bottom: 20 }}>
-                  <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f5f9" />
-                  <XAxis type="number" domain={[100, 'dataMax + 10']} hide />
-                  <YAxis
-                    dataKey="REGION_NAME"
-                    type="category"
-                    tick={{ fill: '#475569', fontSize: 14, fontWeight: 600 }}
-                    width={100}
-                  />
-                  <Tooltip
-                    cursor={{ fill: '#f8fafc' }}
-                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }}
-                  />
-                  <Bar
-                    dataKey="INDEX_VALUE"
-                    radius={[0, 10, 10, 0]}
-                    barSize={45}
-                    label={{ position: 'right', fill: '#6366f1', fontWeight: 800, fontSize: 16 }}
-                  >
-                    {data.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={index === 0 ? '#4f46e5' : '#818cf8'} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          )}
+          <p className="text-slate-500">
+            {targetMonth.slice(0, 4)}년 {targetMonth.slice(4)}월 기준 전국 주요 지역의 매매가격지수를 확인하세요.
+          </p>
         </div>
+      </div>
 
-        {/* 하단 정보 섹션 */}
-        <footer className="mt-8 text-center text-slate-400 text-sm">
-          Oracle Cloud ADB + FastAPI + Next.js Stack
-        </footer>
+      {/* 메인 차트 카드 */}
+      <div className="bg-white rounded-3xl shadow-md p-8 border border-slate-100">
+        <h2 className="text-xl font-bold text-slate-800 mb-6 flex items-center gap-2">
+          🔥 가격지수 TOP 5 랭킹
+        </h2>
+        <div className="h-[400px] w-full">
+          {/* 차트 시각화 부분만 클라이언트 컴포넌트로 렌더링 */}
+          <RankingChart data={data} />
+        </div>
+      </div>
+
+      {/* 추후 AI 조언 패널 영역을 위한 Placeholder */}
+      <div className="bg-indigo-600 rounded-3xl shadow-lg p-8 text-white relative overflow-hidden">
+        <div className="absolute top-0 right-0 -mr-20 -mt-20 w-64 h-64 rounded-full bg-white opacity-10 pointer-events-none blur-3xl"></div>
+        <h2 className="text-2xl font-bold mb-4">✨ AI 시장 인사이트 (준비 중)</h2>
+        <p className="text-indigo-100 italic">
+          "해당 데이터들을 바탕으로 OpenAI를 연동하여 종합적인 시장 조언과 트렌드 분석 리포트를 제공할 예정입니다."
+        </p>
       </div>
     </div>
   );
