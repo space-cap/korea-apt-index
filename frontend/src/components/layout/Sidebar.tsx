@@ -6,7 +6,7 @@ import { LayoutDashboard, TrendingUp, Map as MapIcon, ListOrdered, Home } from "
 import { cn } from "@/lib/utils";
 
 const navItems = [
-  { name: "대시보드", href: "/", icon: LayoutDashboard },
+  { name: "대시보드", href: "/dashboard", icon: LayoutDashboard },
   { name: "트렌드 분석", href: "/trend", icon: TrendingUp },
   { name: "시장 랭킹", href: "/ranking", icon: ListOrdered },
   { name: "전국 지도 뷰", href: "/map", icon: MapIcon },
@@ -18,7 +18,7 @@ export default function Sidebar() {
   return (
     <aside className="w-64 bg-white border-r border-slate-200 flex flex-col h-screen fixed top-0 left-0">
       <div className="h-16 flex items-center px-6 border-b border-slate-200">
-        <Link href="/" className="flex items-center gap-2 font-bold text-xl text-indigo-600">
+        <Link href="/dashboard" className="flex items-center gap-2 font-bold text-xl text-indigo-600">
           <Home className="w-6 h-6" />
           <span>APT Index</span>
         </Link>
