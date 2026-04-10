@@ -5,22 +5,13 @@
   --foreground: #171717;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
+/* 
+ * 시스템 다크모드 강제 설정을 제거했습니다. 
+ * 대신 각 페이지(랜딩/대시보드)에서 명시적으로 지정한 클래스(bg-slate-50, bg-[#0b0f19])가 우선 적용됩니다.
+ */
 
 body {
-  background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
