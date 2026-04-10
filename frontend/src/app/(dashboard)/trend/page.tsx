@@ -1,73 +1,56 @@
-import { TrendingUp, Calendar, Map, Search } from "lucide-react";
+import { TrendingUp } from "lucide-react";
+import api from "@/lib/api";
+import { ApiResponse, Region } from "@/types";
+import TrendAnalysisContainer from "@/components/trend/TrendAnalysisContainer";
 
-export default function TrendPage() {
+async function getRegions() {
+  try {
+    const res = await api.get<ApiResponse<Region[]>>("/api/regions");
+    return res.data.data || [];
+  } catch (error) {
+    console.error("지역 목록 호출 에러:", error);
+    return [];
+  }
+}
+
+export default async function TrendPage() {
+  const regions = await getRegions();
+
   return (
-    <div className="max-w-6xl mx-auto space-y-8">
+    <div className="max-w-6xl mx-auto space-y-8 animate-in fade-in duration-700">
       {/* 1. Header 섹션 */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-8 rounded-[2rem] border border-slate-100 shadow-sm">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
-            <TrendingUp className="w-6 h-6 text-indigo-600" />
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-8 rounded-[2rem] border border-slate-100 shadow-sm relative overflow-hidden">
+        <div className="absolute top-0 left-0 w-2 h-full bg-indigo-600"></div>
+        <div className="relative z-10">
+          <h1 className="text-2xl font-black text-slate-800 flex items-center gap-3">
+            <div className="bg-indigo-50 p-2 rounded-xl">
+              <TrendingUp className="w-6 h-6 text-indigo-600" />
+            </div>
             지역별 트렌드 분석
           </h1>
-          <p className="text-slate-500 text-sm mt-1">특정 지역의 시계열 변동 추이와 시장 흐름을 심층 분석합니다.</p>
+          <p className="text-slate-500 text-sm mt-2 font-medium">
+            대한민국 구석구석의 시계열 변동 추이와 시장 흐름을 데이터로 정밀 분석합니다.
+          </p>
         </div>
         
-        {/* 필터 영역 (Placeholder) */}
-        <div className="flex items-center gap-3">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-            <input 
-              type="text" 
-              placeholder="지역 검색..." 
-              className="pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 w-48 transition-all"
-            />
+        {/* 서비스 상태 요약 (고급스러운 대시보드 느낌) */}
+        <div className="hidden md:flex items-center gap-6">
+          <div className="text-right">
+            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">분석 대상 지역</p>
+            <p className="text-xl font-black text-indigo-600">{regions.length} <span className="text-xs text-slate-600 font-medium">개</span></p>
           </div>
-          <button className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white text-sm font-bold rounded-xl hover:bg-indigo-500 transition-colors">
-            <Calendar className="w-4 h-4" />
-            기간 설정
-          </button>
-        </div>
-      </div>
-
-      {/* 2. 메인 컨텐츠 그리드 */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-        {/* 사이드 영역: 최근 본 지역 / 인기 지역 */}
-        <div className="lg:col-span-1 space-y-6">
-          <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm">
-            <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2 text-sm">
-              <Map className="w-4 h-4 text-slate-400" />
-              인기 분석 지역
-            </h3>
-            <div className="space-y-2">
-              {["서울 강남구", "경기 과천시", "인천 연수구", "세종특별자치시"].map((area) => (
-                <button key={area} className="w-full text-left px-3 py-2 rounded-lg text-sm text-slate-600 hover:bg-slate-50 hover:text-indigo-600 transition-colors">
-                  {area}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* 메인 차트 영역 (Placeholder) */}
-        <div className="lg:col-span-3 bg-white p-8 rounded-[2rem] border border-slate-100 shadow-sm relative overflow-hidden">
-          <div className="h-[500px] flex flex-col items-center justify-center text-slate-400">
-            <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mb-4 text-slate-300">
-               <TrendingUp className="w-8 h-8" />
-            </div>
-            <p className="font-medium">분석할 지역을 선택해 주세요.</p>
-            <p className="text-xs mt-2">선택한 지역의 최근 5년간 매매가격지수 추이가 차트로 표시됩니다.</p>
-            
-            {/* 배경 차트 느낌의 데코레이션 */}
-            <div className="absolute bottom-0 left-0 w-full opacity-[0.03] pointer-events-none">
-               <svg viewBox="0 0 1000 100" className="w-full">
-                 <path d="M0,80 Q150,20 300,50 T600,30 T900,70 L1000,60 L1000,100 L0,100 Z" fill="currentColor" />
-               </svg>
-            </div>
+          <div className="w-px h-8 bg-slate-100"></div>
+          <div className="text-right">
+            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">기준 기간</p>
+            <p className="text-xl font-black text-slate-800">최근 5년</p>
           </div>
         </div>
       </div>
+
+      {/* 2. 클라이언트 사이드 분석 컨테이너 (그리드 포함) */}
+      <TrendAnalysisContainer initialRegions={regions} />
     </div>
   );
 }
+
 

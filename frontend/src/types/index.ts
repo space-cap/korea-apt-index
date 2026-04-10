@@ -17,6 +17,11 @@ export interface AiInsightData {
   insight: string;
 }
 
+export interface TrendPoint {
+  BASE_YYYYMM: string;
+  INDEX_VALUE: number;
+}
+
 export interface ApiResponse<T> {
   status: string;
   data?: T;
